@@ -439,3 +439,135 @@
     min-width: 0;
   }
 }
+
+
+/* ==========================================
+   RECENT MATCH HISTORY
+========================================== */
+
+.prediction-match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.prediction-match-card {
+  background: #0d1724;
+  border: 1px solid #2b3d50;
+  border-left: 3px solid #4b6078;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.prediction-match-card.is-victory {
+  border-left-color: #3eb99a;
+}
+
+.prediction-match-card.is-defeat {
+  border-left-color: #d06d75;
+}
+
+.prediction-match-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  padding: 20px;
+  border: none;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.prediction-match-toggle:hover {
+  background: #192b3f;
+}
+
+.prediction-match-primary,
+.prediction-match-middle,
+.prediction-match-end {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.prediction-match-middle {
+  align-items: center;
+}
+
+.prediction-match-end {
+  align-items: flex-end;
+}
+
+.prediction-match-date,
+.prediction-match-middle span,
+.prediction-match-expand {
+  font-size: 13px;
+  color: #9eafc2;
+}
+
+.prediction-match-rank {
+  color: #d4ad63;
+  font-weight: 700;
+}
+
+.prediction-match-expanded {
+  padding: 20px;
+  border-top: 1px solid #2b3d50;
+  background: #152334;
+}
+
+.prediction-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.prediction-match-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  background: #0d1724;
+  border: 1px solid #2b3d50;
+  border-radius: 8px;
+}
+
+.prediction-match-detail span {
+  font-size: 12px;
+  color: #9eafc2;
+}
+
+.prediction-match-detail strong {
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.prediction-match-note {
+  margin-top: 16px;
+  color: #aebccd;
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .prediction-match-toggle {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .prediction-match-primary,
+  .prediction-match-middle,
+  .prediction-match-end {
+    align-items: flex-start;
+  }
+
+  .prediction-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

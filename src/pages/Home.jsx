@@ -1,15 +1,8 @@
+
 import { useState } from "react";
 import "../styles/home.css";
 
-
-const roleNames = {
-  TOP: "Top",
-  JUNGLE: "Jungle",
-  MIDDLE: "Middle",
-  BOTTOM: "Bottom",
-  UTILITY: "Support",
-};
-
+const API_URL = "http://127.0.0.1:8000";
 
 function Home({ onPredict }) {
   const [formData, setFormData] = useState({
@@ -18,14 +11,8 @@ function Home({ onPredict }) {
     platform: "EUW1",
   });
 
-  const [matches, setMatches] = useState([]);
-  const [accountData, setAccountData] = useState(null);
-
-  const [loadingMatches, setLoadingMatches] = useState(false);
-  const [analysingMatchId, setAnalysingMatchId] = useState(null);
-
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
 
   function updateField(field, value) {
     setFormData((previous) => ({
@@ -34,27 +21,25 @@ function Home({ onPredict }) {
     }));
   }
 
-
-  async function handleFindMatches(event) {
+  async function handlePredict(event) {
     event.preventDefault();
 
-    setLoadingMatches(true);
+    if (loading) return;
+
+    setLoading(true);
     setError("");
-    setMatches([]);
-    setAccountData(null);
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/api/matches/recent",
+        `${API_URL}/api/predictions/overall`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-
           body: JSON.stringify({
             game_name: formData.gameName.trim(),
-            tag_line: formData.tagLine.trim(),
+            tag_line: formData.tagLine.trim().replace(/^#/, ""),
             platform: formData.platform,
           }),
         }
@@ -63,131 +48,63 @@ function Home({ onPredict }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.detail || "Could not find recent matches."
-        );
+        const message =
+          typeof data.detail === "string"
+            ? data.detail
+            : "Could not analyse this player.";
+
+        throw new Error(message);
       }
 
-      setMatches(data.matches);
-
-      setAccountData({
-        gameName: data.game_name,
-        tagLine: data.tag_line,
-        platform: data.platform,
-      });
-
-    } catch (error) {
-      setError(error.message);
-
-    } finally {
-      setLoadingMatches(false);
-    }
-  }
-
-
-  async function handleAnalyseMatch(matchId) {
-    if (!accountData) {
-      return;
-    }
-
-    setAnalysingMatchId(matchId);
-    setError("");
-
-    try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/predictions",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-          },
-
-          body: JSON.stringify({
-            game_name: accountData.gameName,
-            tag_line: accountData.tagLine,
-            platform: accountData.platform,
-            match_id: matchId,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.detail || "Could not analyse this match."
-        );
+      if (!data.overall_prediction || !Array.isArray(data.matches)) {
+        throw new Error("Unexpected response from the backend.");
       }
 
+      // Pass the entire response to the results page.
       onPredict(data);
-
-    } catch (error) {
-      setError(error.message);
-
+    } catch (err) {
+      setError(
+        err.message || "Something went wrong. Please try again."
+      );
     } finally {
-      setAnalysingMatchId(null);
+      setLoading(false);
     }
   }
-
-
-  function formatMatchDate(timestamp) {
-    if (!timestamp) {
-      return "";
-    }
-
-    return new Date(timestamp).toLocaleString([], {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
 
   return (
     <main className="home-page">
-
       {/* HERO */}
       <section className="hero">
-        <p className="eyebrow">
-          RANKSCOPE
-        </p>
+        <p className="eyebrow">RANKSCOPE</p>
 
-        <h1>
-          Discover Your Predicted Rank
-        </h1>
+        <h1>Discover Your Predicted Rank</h1>
 
         <p className="hero-description">
-          Enter your Riot ID, choose one of your recent ranked matches
-          and discover which rank your performance most closely resembles.
+          Enter your Riot ID and let RankScope analyse up to
+          20 recent Ranked Solo/Duo matches to estimate
+          which rank your overall performance most closely
+          resembles.
         </p>
       </section>
-
 
       {/* RIOT ID FORM */}
       <form
         className="prediction-form"
-        onSubmit={handleFindMatches}
+        onSubmit={handlePredict}
       >
-
         <section className="form-section">
-
           <div className="section-heading">
             <div>
-              <h2>
-                Find Your Matches
-              </h2>
+              <h2>Find Your Account</h2>
 
               <p className="section-hint">
-                Enter the Riot ID connected to your League of Legends account.
+                Enter the Riot ID connected to your
+                League of Legends account.
               </p>
             </div>
           </div>
 
-
           <div className="riot-id-grid">
-
             {/* GAME NAME */}
             <div className="riot-field">
               <label
@@ -203,16 +120,13 @@ function Home({ onPredict }) {
                 placeholder="SummonerAce"
                 value={formData.gameName}
                 onChange={(event) =>
-                  updateField(
-                    "gameName",
-                    event.target.value
-                  )
+                  updateField("gameName", event.target.value)
                 }
                 autoComplete="off"
+                disabled={loading}
                 required
               />
             </div>
-
 
             {/* TAG LINE */}
             <div className="riot-field">
@@ -229,18 +143,14 @@ function Home({ onPredict }) {
                 placeholder="EUW"
                 value={formData.tagLine}
                 onChange={(event) =>
-                  updateField(
-                    "tagLine",
-                    event.target.value
-                  )
+                  updateField("tagLine", event.target.value)
                 }
                 autoComplete="off"
+                disabled={loading}
                 required
               />
             </div>
-
           </div>
-
 
           {/* REGION */}
           <div className="riot-field region-field">
@@ -255,50 +165,27 @@ function Home({ onPredict }) {
               id="platform"
               value={formData.platform}
               onChange={(event) =>
-                updateField(
-                  "platform",
-                  event.target.value
-                )
+                updateField("platform", event.target.value)
               }
+              disabled={loading}
             >
-              <option value="EUW1">
-                Europe West
-              </option>
-
+              <option value="EUW1">Europe West</option>
               <option value="EUN1">
                 Europe Nordic & East
               </option>
-
-              <option value="NA1">
-                North America
-              </option>
-
-              <option value="KR">
-                Korea
-              </option>
-
-              <option value="JP1">
-                Japan
-              </option>
-
-              <option value="BR1">
-                Brazil
-              </option>
-
+              <option value="NA1">North America</option>
+              <option value="KR">Korea</option>
+              <option value="JP1">Japan</option>
+              <option value="BR1">Brazil</option>
               <option value="LA1">
                 Latin America North
               </option>
-
               <option value="LA2">
                 Latin America South
               </option>
-
-              <option value="TR1">
-                Turkey
-              </option>
+              <option value="TR1">Turkey</option>
             </select>
           </div>
-
 
           <div className="riot-example">
             <span className="example-label">
@@ -313,10 +200,9 @@ function Home({ onPredict }) {
               #EUW
             </span>
           </div>
-
         </section>
 
-
+        {/* ERROR */}
         {error && (
           <div
             className="prediction-error"
@@ -326,159 +212,51 @@ function Home({ onPredict }) {
           </div>
         )}
 
-
+        {/* PREDICT BUTTON */}
         <button
           className="predict-button"
           type="submit"
-          disabled={loadingMatches}
+          disabled={loading}
         >
           <span>
-            {loadingMatches
-              ? "Finding Matches..."
-              : "Find Recent Matches"}
+            {loading
+              ? "Analysing Recent Matches..."
+              : "Predict My Rank"}
           </span>
 
-          {!loadingMatches && (
+          {!loading && (
             <span className="button-arrow">
               →
             </span>
           )}
         </button>
 
+        {loading && (
+          <p
+            className="section-hint"
+            role="status"
+            style={{
+              textAlign: "center",
+              marginTop: "16px",
+            }}
+          >
+            Retrieving ranked matches and calculating
+            your overall prediction. This may take
+            a little while.
+          </p>
+        )}
       </form>
 
-
-      {/* RECENT MATCHES */}
-      {matches.length > 0 && (
-        <section className="recent-matches">
-
-          <div className="recent-matches-heading">
-            <div>
-              <p className="eyebrow">
-                RECENT MATCHES
-              </p>
-
-              <h2>
-                Choose a Match to Analyse
-              </h2>
-
-              <p>
-                Showing recent Ranked Solo matches for{" "}
-                <strong>
-                  {accountData?.gameName}
-                  #{accountData?.tagLine}
-                </strong>
-              </p>
-            </div>
-          </div>
-
-
-          <div className="match-list">
-
-            {matches.map((match) => {
-
-              const isAnalysing =
-                analysingMatchId === match.match_id;
-
-              return (
-                <article
-                  key={match.match_id}
-                  className="match-card"
-                >
-
-                  <div className="match-result-area">
-
-                    <span
-                      className={
-                        match.win
-                          ? "match-result victory"
-                          : "match-result defeat"
-                      }
-                    >
-                      {match.result}
-                    </span>
-
-                    <span className="match-date">
-                      {formatMatchDate(
-                        match.game_start_timestamp
-                      )}
-                    </span>
-
-                  </div>
-
-
-                  <div className="match-details">
-
-                    <div className="match-detail">
-                      <span>
-                        Role
-                      </span>
-
-                      <strong>
-                        {roleNames[match.role] || match.role}
-                      </strong>
-                    </div>
-
-
-                    <div className="match-detail">
-                      <span>
-                        K / D / A
-                      </span>
-
-                      <strong>
-                        {match.kills} / {match.deaths} / {match.assists}
-                      </strong>
-                    </div>
-
-
-                    <div className="match-detail">
-                      <span>
-                        Duration
-                      </span>
-
-                      <strong>
-                        {match.duration_minutes} min
-                      </strong>
-                    </div>
-
-                  </div>
-
-
-                  <button
-                    type="button"
-                    className="analyse-match-button"
-                    disabled={analysingMatchId !== null}
-                    onClick={() =>
-                      handleAnalyseMatch(
-                        match.match_id
-                      )
-                    }
-                  >
-                    {isAnalysing
-                      ? "Analysing..."
-                      : "Analyse Match"}
-                  </button>
-
-                </article>
-              );
-            })}
-
-          </div>
-
-        </section>
-      )}
-
-
+      {/* DISCLAIMER */}
       <p className="prediction-disclaimer">
-        RankScope analyses one ranked match and estimates
-        which rank your performance in that match most closely
-        resembles. It does not determine your actual League of
-        Legends rank.
+        RankScope estimates a performance-based rank
+        using up to 20 recent Ranked Solo/Duo matches.
+        Results may vary depending on the number of
+        matches available and do not determine your
+        official League of Legends rank.
       </p>
-
     </main>
   );
 }
-
 
 export default Home;
